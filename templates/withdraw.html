@@ -1,0 +1,16 @@
+{% extends "bootstrap/base.html" %}
+
+{% block title %}Withdraw{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Withdraw</h1>
+    <form method="post">
+        <div class="form-group">
+            <label for="amount">Amount:</label>
+            <input type="number" class="form-control" name="amount" id="amount" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Withdraw</button>
+    </form>
+</div>
+{% endblock %}
