@@ -16,11 +16,12 @@ from flask_admin.contrib.sqla import ModelView
 from sqlalchemy.exc import IntegrityError
 # from sqlalchemy.sql.expression import with_for_update
 from flask_admin import Admin, AdminIndexView, expose
+from sqlalchemy import text
 
 app = Flask(__name__)
 Bootstrap(app)  # Bootsrap 装饰一下
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
-app.config['SECRET_KEY'] = 'your-secret-key'
+app.config['SECRET_KEY'] = 'secretkey'
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -43,7 +44,7 @@ class User(db.Model, UserMixin):
     money = db.Column(db.Integer, default=0)
 
     def set_password(self, password):
-        self.password = generate_password_hash(password)
+        self.password = generate_password_hash(password, method='pbkdf2:sha256')
 
     def check_password(self, password):
         return check_password_hash(self.password, password)
@@ -51,7 +52,7 @@ class User(db.Model, UserMixin):
     def __repr__(self):
         return '<User %r>' % self.username
 
-# 转账
+# 提现
 class WithdrawLog(db.Model):
     __tablename__ = 'withdraw_logs'
     id = db.Column(db.Integer, primary_key=True)
@@ -100,6 +101,7 @@ def login():
         password = request.form['password']
         user = User.query.filter_by(username=username).first()
         if user and user.check_password(password):
+            print(f"find user {user}")
             login_user(user)
             return redirect(url_for('withdraw2'))
         else:
@@ -176,21 +178,25 @@ def withdraw4():
 
         # 获取当前用户
         user = User.query.get(current_user.id)
-
         if user.money >= amount:
-            # 检查版本号
-            updated_rows = User.query.filter_by(id=user.id).update({'money': user.money - amount})
+            try:
+                # Begin an exclusive transaction
+                db.session.execute(text("BEGIN EXCLUSIVE"))
 
-            if updated_rows:
-                db.session.add(WithdrawLog(user_id=user.id, amount=amount))
-                db.session.commit()
-                flash('Withdrawal successful')
-            else:
+                # Lock the user row
+                locked_user = db.session.query(User).with_for_update().filter_by(id=user.id).first()
+                if locked_user.money >= amount:
+                    locked_user.money -= amount
+                    db.session.add(WithdrawLog(user_id=user.id, amount=amount))
+                    db.session.commit()
+                    flash('Withdrawal successful')
+                    return redirect(url_for('index'))
+                else:
+                    db.session.rollback()
+                    flash('Insufficient funds')
+                    return render_template('withdraw.html')
+            except IntegrityError:
                 db.session.rollback()
-                flash('Error: Data conflict detected. Please try again.')
-        else:
-            flash('Insufficient funds')
-
     return render_template('withdraw.html')
 
 
