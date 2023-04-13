@@ -20,7 +20,9 @@ from sqlalchemy import text
 
 app = Flask(__name__)
 Bootstrap(app)  # Bootsrap 装饰一下
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://myuser:mypassword@localhost/mydb?charset=utf8mb4'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'secretkey'
 
 login_manager = LoginManager()
@@ -155,15 +157,17 @@ def withdraw3():
         # 开始一个新的事务，这里无法开启新事物只能开启嵌套事物
         with db.session.begin_nested():
             # 使用悲观锁获取用户记录
-            locked_user = db.session.query(User).with_for_update().get(current_user.id)
+            db.session.flush()
+            locked_user = db.session.query(User).filter(User.id==current_user.id).with_for_update().first()
 
-            if locked_user.money >= amount:
+            try:
                 locked_user.money -= amount
+                # db.session.flush()
                 db.session.add(WithdrawLog(user_id=locked_user.id, amount=amount))
                 db.session.commit()
                 flash('Withdrawal successful')
                 return redirect(url_for('index'))
-            else:
+            except IntegrityError:
                 # 撤回事务以释放锁
                 db.session.rollback()
                 flash('Insufficient funds')
@@ -180,9 +184,6 @@ def withdraw4():
         user = User.query.get(current_user.id)
         if user.money >= amount:
             try:
-                # Begin an exclusive transaction
-                db.session.execute(text("BEGIN EXCLUSIVE"))
-
                 # Lock the user row
                 locked_user = db.session.query(User).with_for_update().filter_by(id=user.id).first()
                 if locked_user.money >= amount:
