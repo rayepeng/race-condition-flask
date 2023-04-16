@@ -26,19 +26,6 @@ class NewUser(db.Model):
         self.money = money
 
 
-
-# with app.app_context():
-    # 创建表
-    # db.create_all()
-
-    # # 创建用户
-    # user = NewUser()
-    # user.set_username('test')
-    # user.set_money(1000)
-    # db.session.add(user)
-    # db.session.commit()
-
-    # 多线程行锁测试
 import threading
 import time
 from time import sleep
