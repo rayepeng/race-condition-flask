@@ -157,17 +157,15 @@ def withdraw3():
         # 开始一个新的事务，这里无法开启新事物只能开启嵌套事物
         with db.session.begin_nested():
             # 使用悲观锁获取用户记录
-            db.session.flush()
             locked_user = db.session.query(User).filter(User.id==current_user.id).with_for_update().first()
 
-            try:
+            if locked_user.money >= amount:
                 locked_user.money -= amount
-                # db.session.flush()
                 db.session.add(WithdrawLog(user_id=locked_user.id, amount=amount))
                 db.session.commit()
                 flash('Withdrawal successful')
                 return redirect(url_for('index'))
-            except IntegrityError:
+            else:
                 # 撤回事务以释放锁
                 db.session.rollback()
                 flash('Insufficient funds')
