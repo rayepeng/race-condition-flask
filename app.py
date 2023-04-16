@@ -173,74 +173,49 @@ def withdraw1():
 @app.route('/withdraw2', methods=['GET','POST'])
 @login_required
 def withdraw2():
-    if request.method == 'POST':
-        amount = int(request.form['amount'])
-        if current_user.money >= amount:
-            with db.session.begin_nested():
-                # 增加原子操作
-                try:
-                    current_user.money -= amount
-                    db.session.add(WithdrawLog(user_id=current_user.id, amount=amount))
-                    db.session.commit()
-                except IntegrityError:
-                    db.session.rollback()
-                    flash('An error occurred during withdrawal. Please try again.')
-                    return render_template('withdraw.html')
+    form = WithDrawForm()
+    # 转账增加事务
+    if form.validate_on_submit():
+        amount = int(form.amount.data)
+        try:
+            current_user.money -= amount
+            db.session.add(WithdrawLog(user_id=current_user.id, amount=amount))
+            db.session.commit()
             flash('Withdrawal successful')
             return redirect(url_for('index'))
-        else:
-            flash('Insufficient funds')
-    return render_template('withdraw.html')
+        except Exception as e:
+            db.session.rollback()
+            flash('Withdrawal failed')
+            return redirect(url_for('index'))
+    return render_template('withdraw.html', form=form)
+
 
 @app.route('/withdraw3', methods=['GET','POST'])
 @login_required
 def withdraw3():
-    if request.method == 'POST':
-        # 开始时间
-        start_time = time.time()
-        amount = int(request.form['amount'])
-            # 使用悲观锁获取用户记录
-        locked_user = User.query.filter_by(id=current_user.id).with_for_update().first()
-        # 不满足则返回
-        if locked_user.money < amount:
-            flash('Insufficient funds')
-            return render_template('withdraw.html')
-        locked_user.money -= amount
-        db.session.add(WithdrawLog(user_id=locked_user.id, amount=amount))
-        db.session.commit()
-        flash('Withdrawal successful')
-        end = time.time()
-        # 打印耗时
-        print(f"耗时：{end - start_time}")
-        return redirect(url_for('index'))
-
-    return render_template('withdraw.html')
-
-@app.route('/withdraw4', methods=['GET', 'POST'])
-@login_required
-def withdraw4():
-    if request.method == 'POST':
-        amount = int(request.form['amount'])
-
-        # 获取当前用户
-        user = User.query.get(current_user.id)
-        if user.money >= amount:
-            try:
-                # Lock the user row
-                locked_user = db.session.query(User).with_for_update().filter_by(id=user.id).first()
-                if locked_user.money >= amount:
-                    locked_user.money -= amount
-                    db.session.add(WithdrawLog(user_id=user.id, amount=amount))
-                    db.session.commit()
-                    flash('Withdrawal successful')
-                    return redirect(url_for('index'))
-                else:
-                    db.session.rollback()
-                    flash('Insufficient funds')
-                    return render_template('withdraw.html')
-            except IntegrityError:
+    form = WithDrawForm()
+    # 加悲观锁
+    if form.validate_on_submit():
+        amount = int(form.amount.data)
+        try:
+            # Lock the user row
+            locked_user = db.session.query(User).with_for_update().filter_by(id=current_user.id).first()
+            if locked_user.money >= amount:
+                locked_user.money -= amount
+                db.session.add(WithdrawLog(user_id=current_user.id, amount=amount))
+                db.session.commit()
+                flash('Withdrawal successful')
+                return redirect(url_for('index'))
+            else:
                 db.session.rollback()
-    return render_template('withdraw.html')
+                flash('Insufficient funds')
+                return render_template('withdraw.html', form=form)
+        except Exception as e:
+            db.session.rollback()
+            flash('Withdrawal failed')
+            return render_template('withdraw.html', form=form)
+    return render_template('withdraw.html', form=form)
+
 
 
 @app.route('/logout')
