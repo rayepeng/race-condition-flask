@@ -5,12 +5,15 @@
 {% block content %}
 <div class="container">
     <h1>Withdraw</h1>
-    <form method="post">
+    <form method="POST">
+        {{ form.csrf_token }}
         <div class="form-group">
-            <label for="amount">Amount:</label>
-            <input type="number" class="form-control" name="amount" id="amount" required>
+            {{ form.amount.label(class="form-control-label") }}
+            {{ form.amount(class="form-control") }}
         </div>
-        <button type="submit" class="btn btn-primary">Withdraw</button>
+        <div class="form-group">
+            {{ form.submit(class="btn btn-primary") }}
+        </div>
     </form>
 </div>
 {% endblock %}

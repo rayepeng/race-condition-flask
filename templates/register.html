@@ -4,37 +4,30 @@
 
 {% block content %}
 <div class="container">
-    <form method="POST" action="{{ url_for('register') }}">
-        {{ form.hidden_tag() }}
+    <!-- 注册表单 -->
+    <h1>Register</h1>
+    <form method="POST">
+        {{ form.csrf_token }}
         <div class="form-group">
-            {{ form.username.label }}<br>
-            {{ form.username(size=32) }}
-            {% for error in form.username.errors %}
-            <span>{{ error }}</span>
-            {% endfor %}
+            {{ form.username.label(class="form-control-label") }}
+            {{ form.username(class="form-control") }}
+        </div>
+        <div>
+            <!-- email -->
+            {{ form.email.label(class="form-control-label") }}
+            {{ form.email(class="form-control") }}
         </div>
         <div class="form-group">
-            {{ form.email.label }}<br>
-            {{ form.email(size=64) }}
-            {% for error in form.email.errors %}
-            <span>{{ error }}</span>
-            {% endfor %}
+            {{ form.password.label(class="form-control-label") }}
+            {{ form.password(class="form-control") }}
         </div>
         <div class="form-group">
-            {{ form.password.label }}<br>
-            {{ form.password(size=32) }}
-            {% for error in form.password.errors %}
-            <span>{{ error }}</span>
-            {% endfor %}
+            {{ form.confirm_password.label(class="form-control-label") }}
+            {{ form.confirm_password(class="form-control") }}
         </div>
         <div class="form-group">
-            {{ form.confirm_password.label }}<br>
-            {{ form.confirm_password(size=32) }}
-            {% for error in form.confirm_password.errors %}
-            <span>{{ error }}</span>
-            {% endfor %}
+            {{ form.submit(class="btn btn-primary") }}
         </div>
-        <div class="form-group">{{ form.submit() }}</div>
     </form>
 </div>
 {% endblock %}

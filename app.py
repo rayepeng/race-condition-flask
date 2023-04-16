@@ -65,6 +65,39 @@ class WithdrawLog(db.Model):
     def __repr__(self):
         return '<WithdrawLog %r>' % self.id
 
+# 编写WithDrawForm
+class WithDrawForm(FlaskForm):
+    amount = StringField('Amount', validators=[DataRequired()])
+    submit = SubmitField('Withdraw')
+
+    # 自定义验证器
+    def validate_amount(self, amount):
+        if not amount.data.isdigit():
+            raise ValidationError('Amount must be a number')
+        if int(amount.data) <= 0:
+            raise ValidationError('Amount must be greater than 0')
+        if int(amount.data) > current_user.money:
+            raise ValidationError('Insufficient funds')
+
+# 注册表单
+class RegistrationForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired()])
+    email = StringField('Email', validators=[DataRequired(), Email()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password')])
+    submit = SubmitField('Sign Up')
+
+    def validate_username(self, username):
+        user = User.query.filter_by(username=username.data).first()
+        if user:
+            raise ValidationError('That username is taken. Please choose a different one.')
+
+    def validate_email(self, email):
+        user = User.query.filter_by(email=email.data).first()
+        if user:
+            raise ValidationError('That email is taken. Please choose a different one.')
+
+
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -110,20 +143,33 @@ def login():
             flash('Invalid username or password')
     return render_template('login.html')
 
+# 实现注册
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        user = User(username=form.username.data, email=form.email.data)
+        user.set_password(form.password.data)
+        db.session.add(user)
+        db.session.commit()
+        flash('Account created for {}!'.format(form.username.data))
+        return redirect(url_for('login'))
+    return render_template('register.html', title='Register', form=form)
+
+
 @app.route('/withdraw1', methods=['GET','POST'])
 @login_required
 def withdraw1():
-    if request.method == 'POST':
-        amount = int(request.form['amount'])
-        if current_user.money >= amount:
-            current_user.money -= amount
-            db.session.add(WithdrawLog(user_id=current_user.id, amount=amount))
-            db.session.commit()
-            flash('Withdrawal successful')
-            return redirect(url_for('index'))
-        else:
-            flash('Insufficient funds')
-    return render_template('withdraw.html')
+    form = WithDrawForm()
+    # 如果POST且验证通过
+    if form.validate_on_submit():
+        amount = int(form.amount.data)
+        current_user.money -= amount
+        db.session.add(WithdrawLog(user_id=current_user.id, amount=amount))
+        db.session.commit()
+        flash('Withdrawal successful')
+        return redirect(url_for('index'))
+    return render_template('withdraw.html', form=form)
 
 
 @app.route('/withdraw2', methods=['GET','POST'])
