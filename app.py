@@ -17,7 +17,7 @@ from sqlalchemy.exc import IntegrityError
 # from sqlalchemy.sql.expression import with_for_update
 from flask_admin import Admin, AdminIndexView, expose
 from sqlalchemy import text
-
+import time
 app = Flask(__name__)
 Bootstrap(app)  # Bootsrap 装饰一下
 # app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
@@ -152,23 +152,23 @@ def withdraw2():
 @login_required
 def withdraw3():
     if request.method == 'POST':
+        # 开始时间
+        start_time = time.time()
         amount = int(request.form['amount'])
-
-        # 开始一个新的事务，这里无法开启新事物只能开启嵌套事物
-        with db.session.begin_nested():
             # 使用悲观锁获取用户记录
-            locked_user = db.session.query(User).filter(User.id==current_user.id).with_for_update().first()
-
-            if locked_user.money >= amount:
-                locked_user.money -= amount
-                db.session.add(WithdrawLog(user_id=locked_user.id, amount=amount))
-                db.session.commit()
-                flash('Withdrawal successful')
-                return redirect(url_for('index'))
-            else:
-                # 撤回事务以释放锁
-                db.session.rollback()
-                flash('Insufficient funds')
+        locked_user = User.query.filter_by(id=current_user.id).with_for_update().first()
+        # 不满足则返回
+        if locked_user.money < amount:
+            flash('Insufficient funds')
+            return render_template('withdraw.html')
+        locked_user.money -= amount
+        db.session.add(WithdrawLog(user_id=locked_user.id, amount=amount))
+        db.session.commit()
+        flash('Withdrawal successful')
+        end = time.time()
+        # 打印耗时
+        print(f"耗时：{end - start_time}")
+        return redirect(url_for('index'))
 
     return render_template('withdraw.html')
 
