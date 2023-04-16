@@ -14,9 +14,7 @@ from flask_migrate import Migrate
 from flask_admin import Admin
 from flask_admin.contrib.sqla import ModelView
 from sqlalchemy.exc import IntegrityError
-# from sqlalchemy.sql.expression import with_for_update
 from flask_admin import Admin, AdminIndexView, expose
-from sqlalchemy import text
 import time
 app = Flask(__name__)
 Bootstrap(app)  # Bootsrap 装饰一下
@@ -138,7 +136,7 @@ def login():
         if user and user.check_password(password):
             print(f"find user {user}")
             login_user(user)
-            return redirect(url_for('withdraw2'))
+            return redirect(url_for('admin'))
         else:
             flash('Invalid username or password')
     return render_template('login.html')
