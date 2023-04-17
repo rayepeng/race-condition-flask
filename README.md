@@ -103,3 +103,20 @@ def withdraw2():
 
 参见 `mysql_lock_test` 测试
 
+
+
+## TODO
+
+A 转账给 B 验证
+
+
+这篇文章稍微讲解了下flask 条件竞争漏洞的成因
+https://www.makeuseof.com/race-condition-vulnerability/
+
+CPU在每个进程间依次轮转
+![](https://static1.makeuseofimages.com/wordpress/wp-content/uploads/2022/11/round-robin-algorithm-diagram-drawing.jpg?q=50&fit=crop&w=1500&dpr=1.5)
+
+
+这里是官方文档
+https://flask-sqlalchemy.palletsprojects.com/en/3.0.x/ 
+
